@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AllLivingCost - 생활비 관리</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>AllLivingCost</h1>
+            <p>생활비 관리 시스템</p>
+        </header>
+
+        <form id="livingCostForm" class="form-container">
+            <div class="form-section">
+                <h2>주거 관련 비용</h2>
+                
+                <div class="form-group">
+                    <label for="mortgage">1. Mortgage 및 Apartment</label>
+                    <input type="number" id="mortgage" name="mortgage" step="0.01" placeholder="월세/아파트 비용을 입력하세요">
+                </div>
+
+                <div class="form-group">
+                    <label for="internet">2. Internet</label>
+                    <input type="number" id="internet" name="internet" step="0.01" placeholder="인터넷 요금을 입력하세요">
+                </div>
+
+                <div class="form-group">
+                    <label for="hoa">3. HOA</label>
+                    <input type="number" id="hoa" name="hoa" step="0.01" placeholder="HOA 비용을 입력하세요">
+                </div>
+
+                <div class="form-group">
+                    <label for="garbage">4. 쓰레기</label>
+                    <input type="number" id="garbage" name="garbage" step="0.01" placeholder="쓰레기 수거료를 입력하세요">
+                </div>
+
+                <div class="form-group">
+                    <label for="water">5. 수도 사용료</label>
+                    <input type="number" id="water" name="water" step="0.01" placeholder="수도 요금을 입력하세요">
+                </div>
+
+                <div class="form-group">
+                    <label for="electric">13. Electric fee</label>
+                    <input type="number" id="electric" name="electric" step="0.01" placeholder="전기 요금을 입력하세요">
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2>대출 및 부채</h2>
+                
+                <div class="form-group">
+                    <label for="personalLoan">6. Personal Loan per each</label>
+                    <input type="number" id="personalLoan" name="personalLoan" step="0.01" placeholder="개인 대출 금액을 입력하세요">
+                </div>
+
+                <div class="form-group">
+                    <label for="creditDebt">7. Credit debt</label>
+                    <input type="number" id="creditDebt" name="creditDebt" step="0.01" placeholder="신용카드 부채를 입력하세요">
+                </div>
+
+                <div class="form-group">
+                    <label for="studentLoan">10. 학자금 융자</label>
+                    <input type="number" id="studentLoan" name="studentLoan" step="0.01" placeholder="학자금 대출을 입력하세요">
+                </div>
+
+                <div class="form-group">
+                    <label for="carPayment">11. Car financial Payment</label>
+                    <input type="number" id="carPayment" name="carPayment" step="0.01" placeholder="자동차 할부금을 입력하세요">
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2>기타 비용</h2>
+                
+                <div class="form-group">
+                    <label for="subscription">8. Subscription</label>
+                    <input type="number" id="subscription" name="subscription" step="0.01" placeholder="구독 서비스 비용을 입력하세요">
+                </div>
+
+                <div class="form-group">
+                    <label for="insurance">9. Insurance</label>
+                    <input type="number" id="insurance" name="insurance" step="0.01" placeholder="보험료를 입력하세요">
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2>수입</h2>
+                
+                <div class="form-group">
+                    <label for="income">12. 들어오는 Income</label>
+                    <input type="number" id="income" name="income" step="0.01" placeholder="월 수입을 입력하세요">
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn-submit">데이터 저장</button>
+                <button type="button" class="btn-reset" onclick="resetForm()">폼 초기화</button>
+            </div>
+        </form>
+
+        <div id="message" class="message"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 
