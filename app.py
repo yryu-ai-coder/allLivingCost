@@ -41,17 +41,27 @@ def get_google_sheets_client():
         return None
 
 def save_to_google_sheets(data):
-    """Save data to Google Sheets (well-designed table: group by category, add headers, format for readability)"""
+    """Save data to Google Sheets (overwrite if same date sheet exists)"""
     try:
         client = get_google_sheets_client()
         if not client:
             return save_to_local_file(data)
 
         spreadsheet = client.open_by_key(SPREADSHEET_ID)
-        # Always create a new sheet with a unique name (date + time)
-        now = datetime.now()
-        sheet_name = now.strftime("%Y-%m-%d_%H-%M-%S")
-        worksheet = spreadsheet.add_worksheet(title=sheet_name, rows="100", cols="20")
+        # Use only date (YYYY-MM-DD) as sheet name, even if data['date'] has time
+        raw_date = data.get("date")
+        if raw_date:
+            # '2025-07-09T12:34:56' 또는 '2025-07-09_21-39-36' 등 어떤 값이 와도 '2025-07-09'만 추출
+            sheet_name = str(raw_date).split('T')[0].split('_')[0]
+        else:
+            sheet_name = datetime.now().strftime("%Y-%m-%d")
+        worksheet = None
+        # Check if sheet exists
+        try:
+            worksheet = spreadsheet.worksheet(sheet_name)
+            worksheet.clear()  # Overwrite: clear existing content
+        except gspread.exceptions.WorksheetNotFound:
+            worksheet = spreadsheet.add_worksheet(title=sheet_name, rows="100", cols="20")
 
         # 카테고리 정의
         categories = [
@@ -89,7 +99,7 @@ def save_to_google_sheets(data):
                 rows.append([""])
 
         worksheet.append_rows(rows, value_input_option="USER_ENTERED")
-        logger.info(f"Data saved to Google Sheets in new sheet: {sheet_name}")
+        logger.info(f"Data saved to Google Sheets in sheet: {sheet_name} (overwrite if existed)")
         return True
     except Exception as e:
         logger.error(f"Error saving to Google Sheets: {e}")
@@ -204,6 +214,38 @@ def get_data():
             'success': False,
             'error': 'Failed to get data.'
         }), 500
+
+@app.route('/api/sheet-names', methods=['GET'])
+def get_sheet_names():
+    """Return list of sheet names in the spreadsheet"""
+    try:
+        client = get_google_sheets_client()
+        if not client:
+            return jsonify({'success': False, 'error': 'Google Sheets 연결 실패'}), 500
+        spreadsheet = client.open_by_key(SPREADSHEET_ID)
+        sheet_names = [ws.title for ws in spreadsheet.worksheets()]
+        return jsonify({'success': True, 'sheet_names': sheet_names})
+    except Exception as e:
+        logger.error(f"Error in get_sheet_names: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/get-sheet-data', methods=['GET'])
+def get_sheet_data():
+    """Return all data from a specific sheet (by name)"""
+    sheet_name = request.args.get('sheet')
+    if not sheet_name:
+        return jsonify({'success': False, 'error': 'sheet 파라미터 필요'}), 400
+    try:
+        client = get_google_sheets_client()
+        if not client:
+            return jsonify({'success': False, 'error': 'Google Sheets 연결 실패'}), 500
+        spreadsheet = client.open_by_key(SPREADSHEET_ID)
+        worksheet = spreadsheet.worksheet(sheet_name)
+        values = worksheet.get_all_values()
+        return jsonify({'success': True, 'data': values})
+    except Exception as e:
+        logger.error(f"Error in get_sheet_data: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/health', methods=['GET'])
 def health_check():

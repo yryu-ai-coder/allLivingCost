@@ -98,14 +98,23 @@ form.addEventListener('submit', async function(e) {
     e.preventDefault();
 
     const formData = new FormData(form);
-    const data = {};
 
+    // Selected Sheet에서 날짜 추출해 date 필드로 세팅
+    const label = document.getElementById('selectedSheetLabel');
+    if (label && label.textContent.includes(':')) {
+        const selectedDate = label.textContent.split(':')[1].trim();
+        if (selectedDate) {
+            formData.set('date', selectedDate);
+        }
+    }
+
+    const data = {};
     // 모든 input 값을 key-value로 저장 (빈 값도 포함)
     for (let [key, value] of formData.entries()) {
         data[key] = value;
     }
-    // 날짜 정보 추가
-    data.date = new Date().toISOString().split('T')[0];
+    // 날짜 정보 추가 (이미 위에서 세팅됨)
+    data.date = formData.get('date');
     data.timestamp = new Date().toISOString();
 
     showMessage('Saving data...', 'loading');
@@ -123,6 +132,11 @@ form.addEventListener('submit', async function(e) {
             showMessage('Your data has been saved successfully!', 'success');
             setTimeout(() => {
                 resetForm();
+                // 드롭다운과 Selected Sheet 라벨도 초기화
+                const select = document.getElementById('sheetSelect');
+                if (select) select.selectedIndex = 0;
+                const label = document.getElementById('selectedSheetLabel');
+                if (label) label.textContent = '';
             }, 3000);
         } else {
             showMessage(result.error || 'Failed to save data.', 'error');
@@ -170,8 +184,166 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
+// 인증 확인 함수
+function checkAuthentication() {
+    const isAuthenticated = localStorage.getItem('isAuthenticated');
+    if (!isAuthenticated) {
+        window.location.href = 'login.html';
+        return false;
+    }
+    return true;
+}
+
+// 로그아웃 함수
+function logout() {
+    // 인증 정보 제거
+    localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('userEmail');
+    
+    // 로그인 페이지로 리다이렉트
+    window.location.href = 'login.html';
+}
+
+// 시트 목록 불러오기 및 드롭다운 채우기
+async function loadSheetNames() {
+    try {
+        const res = await fetch('/api/sheet-names');
+        const data = await res.json();
+        if (data.success) {
+            const select = document.getElementById('sheetSelect');
+            select.innerHTML = '';
+            // 초기값 추가
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = '';
+            defaultOpt.textContent = 'Select Sheet';
+            defaultOpt.disabled = true;
+            defaultOpt.selected = true;
+            select.appendChild(defaultOpt);
+            data.sheet_names.forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                select.appendChild(opt);
+            });
+            // Selected Sheet 라벨도 초기화
+            const label = document.getElementById('selectedSheetLabel');
+            if (label) label.textContent = '';
+        }
+    } catch (e) {
+        console.error('시트 목록 불러오기 실패:', e);
+    }
+}
+
+// 시트 데이터를 폼에 반영하는 함수
+function applySheetDataToForm(sheetData) {
+    console.log('applySheetDataToForm에 전달된 sheetData:', sheetData); // 디버깅용
+    if (!Array.isArray(sheetData) || sheetData.length === 0) return;
+
+    // 1. Date 행에서 날짜 추출
+    let i = 0;
+    let sheetDate = null;
+    if (sheetData[0][0] === 'Date') {
+        sheetDate = sheetData[0][1];
+        i++;
+    }
+    resetForm();
+    // 날짜 필드 제거, 대신 시트명 표시
+    const label = document.getElementById('selectedSheetLabel');
+    if (sheetDate && label) {
+        label.textContent = `Selected Sheet: ${sheetDate}`;
+    } else if (label) {
+        label.textContent = '';
+    }
+
+    let sectionMap = {
+        'INCOME': 'income',
+        'HOUSING': 'housing',
+        'CREDIT & INSTALLMENT PAYMENTS': 'credit',
+        'PERSONAL LOANS': 'loans',
+        'VEHICLE EXPENSES': 'vehicle',
+        'STUDENT LOAN': 'studentloan',
+        'UTILITIES & TELECOM': 'utilities',
+        'INSURANCE': 'insurance',
+        'SUBSCRIPTIONS': 'subscriptions',
+    };
+
+    while (i < sheetData.length) {
+        const row = sheetData[i];
+        if (row.length >= 1 && sectionMap[row[0]]) {
+            const sectionKey = sectionMap[row[0]];
+            i++;
+            if (sheetData[i] && sheetData[i][0] === 'Item') i++;
+            let itemIdx = 0;
+            const section = document.querySelector(`.form-section[data-section="${sectionKey}"]`);
+            if (section) {
+                section.querySelectorAll('.form-group.currency-input-group').forEach((el, idx) => {
+                    if (idx > 0) el.remove();
+                });
+            }
+            while (
+                i < sheetData.length &&
+                sheetData[i].length >= 2 &&
+                sheetData[i][0] &&
+                (sheetData[i][1] || sheetData[i][1] === "" || sheetData[i][1] === "0")
+            ) {
+                const item = sheetData[i][0];
+                const amount = sheetData[i][1];
+                if (itemIdx === 0) {
+                    if (section) {
+                        section.querySelector('.item-title').value = item;
+                        section.querySelector('.currency-input').value = amount;
+                    }
+                } else {
+                    if (section) {
+                        addItem(section.querySelector('.add-item-btn'));
+                        const groups = section.querySelectorAll('.form-group.currency-input-group');
+                        const lastGroup = groups[groups.length - 1];
+                        lastGroup.querySelector('.item-title').value = item;
+                        lastGroup.querySelector('.currency-input').value = amount;
+                    }
+                }
+                itemIdx++;
+                i++;
+            }
+        } else {
+            i++;
+        }
+    }
+    document.querySelectorAll('.form-section').forEach(section => {
+        updateSubTotal(section);
+    });
+}
+
+// 시트 데이터 불러오기 및 콘솔 출력 (폼 반영은 후처리)
+async function loadSelectedSheetData() {
+    const select = document.getElementById('sheetSelect');
+    const sheetName = select.value;
+    if (!sheetName) return;
+    try {
+        const res = await fetch(`/api/get-sheet-data?sheet=${encodeURIComponent(sheetName)}`);
+        const data = await res.json();
+        if (data.success) {
+            console.log('시트 데이터:', data.data); // 디버깅용
+            applySheetDataToForm(data.data);
+            showMessage('Sheet data loaded!', 'success');
+            // Load 후 드롭다운을 다시 초기화
+            select.selectedIndex = 0;
+        } else {
+            showMessage('Failed to load sheet data: ' + (data.error || ''), 'error');
+        }
+    } catch (e) {
+        showMessage('Error loading sheet data', 'error');
+        console.error(e);
+    }
+}
+
 // 페이지 로드 시 초기화
 document.addEventListener('DOMContentLoaded', function() {
+    // 인증 확인
+    if (!checkAuthentication()) {
+        return;
+    }
+    
     // 폼 필드에 자동완성 비활성화
     const inputs = form.querySelectorAll('input');
     inputs.forEach(input => {
@@ -183,6 +355,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (firstInput) {
         firstInput.focus();
     }
+    loadSheetNames();
+    document.getElementById('loadSheetBtn').addEventListener('click', loadSelectedSheetData);
 });
 
 // 데이터 미리보기 기능 (개발용)
@@ -441,12 +615,31 @@ function toggleAccordion(header) {
     const chevron = header.querySelector('.accordion-chevron');
     const isOpen = content.style.display === 'block';
 
-    // Close all other sections
-    document.querySelectorAll('.accordion-content').forEach(c => c.style.display = 'none');
-    document.querySelectorAll('.accordion-chevron').forEach(ch => ch.style.transform = 'rotate(0deg)');
-
-    if (!isOpen) {
+    if (isOpen) {
+        content.style.display = 'none';
+        chevron.style.transform = 'rotate(0deg)';
+    } else {
         content.style.display = 'block';
         chevron.style.transform = 'rotate(180deg)';
     }
+} 
+
+// Expand All Accordions
+function expandAllAccordions() {
+    document.querySelectorAll('.accordion-content').forEach(content => {
+        content.style.display = 'block';
+    });
+    document.querySelectorAll('.accordion-chevron').forEach(chevron => {
+        chevron.style.transform = 'rotate(180deg)';
+    });
+}
+
+// Collapse All Accordions
+function collapseAllAccordions() {
+    document.querySelectorAll('.accordion-content').forEach(content => {
+        content.style.display = 'none';
+    });
+    document.querySelectorAll('.accordion-chevron').forEach(chevron => {
+        chevron.style.transform = 'rotate(0deg)';
+    });
 } 
