@@ -26,7 +26,7 @@ function resetForm() {
         input.style.transform = 'translateY(0)';
     });
     
-    showMessage('폼이 초기화되었습니다.', 'success');
+    showMessage('Form has been reset.', 'success');
 }
 
 // 입력값 검증 함수
@@ -40,12 +40,12 @@ function validateForm(formData) {
     for (let field of requiredFields) {
         const value = formData.get(field);
         if (!value || value === '') {
-            showMessage(`${field} 필드를 입력해주세요.`, 'error');
+            showMessage(`${field} field is required.`, 'error');
             return false;
         }
         
         if (isNaN(value) || parseFloat(value) < 0) {
-            showMessage(`${field} 필드에 유효한 숫자를 입력해주세요.`, 'error');
+            showMessage(`${field} field must be a valid number.`, 'error');
             return false;
         }
     }
@@ -96,68 +96,39 @@ function analyzeFinancialHealth(data) {
 // 폼 제출 처리
 form.addEventListener('submit', async function(e) {
     e.preventDefault();
-    
+
     const formData = new FormData(form);
-    
-    // 입력값 검증
-    if (!validateForm(formData)) {
-        return;
+    const data = {};
+
+    // 모든 input 값을 key-value로 저장 (빈 값도 포함)
+    for (let [key, value] of formData.entries()) {
+        data[key] = value;
     }
-    
-    // 데이터 객체로 변환
-    const data = formDataToObject(formData);
-    
-    // 재정 상태 분석
-    const analysis = analyzeFinancialHealth(data);
-    
-    // 로딩 메시지 표시
-    showMessage('데이터를 저장하는 중입니다...', 'loading');
-    
+    // 날짜 정보 추가
+    data.date = new Date().toISOString().split('T')[0];
+    data.timestamp = new Date().toISOString();
+
+    showMessage('Saving data...', 'loading');
+
     try {
-        // Python 백엔드로 데이터 전송
         const response = await fetch('/api/save-data', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                ...data,
-                analysis: analysis
-            })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
         });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
-            // 성공 메시지와 함께 재정 분석 결과 표시
-            let message = '데이터가 성공적으로 저장되었습니다!\n\n';
-            message += `총 비용: $${analysis.totalCosts.toFixed(2)}\n`;
-            message += `순수입: $${analysis.netIncome.toFixed(2)}\n`;
-            message += `저축률: ${analysis.savingsRate.toFixed(1)}%\n\n`;
-            
-            if (analysis.isHealthy) {
-                message += '🎉 좋은 재정 상태입니다!';
-            } else {
-                message += '⚠️ 지출을 줄이는 것을 고려해보세요.';
-            }
-            
-            showMessage(message, 'success');
-            
-            // 폼 초기화
+            showMessage('Your data has been saved successfully!', 'success');
             setTimeout(() => {
                 resetForm();
             }, 3000);
         } else {
-            showMessage(result.error || '데이터 저장에 실패했습니다.', 'error');
+            showMessage(result.error || 'Failed to save data.', 'error');
         }
-        
     } catch (error) {
-        console.error('Error:', error);
-        showMessage('서버 연결에 실패했습니다. 나중에 다시 시도해주세요.', 'error');
+        showMessage('Failed to connect to the server. Please try again later.', 'error');
     }
 });
 
@@ -226,4 +197,256 @@ function previewData() {
 
 // 개발자 도구에서 사용할 수 있도록 전역 함수로 노출
 window.previewData = previewData;
-window.resetForm = resetForm; 
+window.resetForm = resetForm;
+
+// Helper to (re)bind input events and update subtotal for a section
+function bindAndUpdateSection(section) {
+    section.querySelectorAll('.currency-input').forEach(input => {
+        if (!input._subTotalHandler) {
+            input._subTotalHandler = function() { updateSubTotal(this); };
+            input.addEventListener('input', input._subTotalHandler);
+        }
+    });
+    updateSubTotal(section);
+}
+
+// Add item logic for dynamic item addition
+function addItem(btn) {
+    const section = btn.closest('.form-section');
+    const sectionName = section.getAttribute('data-section');
+    const formGroups = section.querySelectorAll('.form-group.currency-input-group');
+    const itemCount = formGroups.length;
+    const itemName = `item_${sectionName}_${itemCount}`;
+    const amountName = `${sectionName}_${itemCount}`;
+    const formGroup = document.createElement('div');
+    formGroup.className = 'form-group currency-input-group fade-in-item';
+    formGroup.innerHTML = `
+        <input type="text" name="${itemName}" placeholder="New Item" class="item-title">
+        <div class="currency-input-wrapper">
+            <span class="currency-symbol">$</span>
+            <input type="number" name="${amountName}" step="0.01" placeholder="Amount" class="currency-input">
+        </div>
+        <button type="button" class="delete-item-btn" aria-label="Delete item" onclick="deleteItem(this)">
+            <span class="delete-icon">&#10005;</span>
+            <span class="delete-tooltip">Delete item</span>
+        </button>
+    `;
+    // Insert before the sub-total row (which is always before the add button)
+    const subTotalRow = section.querySelector('.sub-total-row');
+    section.insertBefore(formGroup, subTotalRow);
+    setTimeout(() => {
+        formGroup.classList.add('show');
+    }, 10);
+    // Bind input event only for the new input
+    const newInput = formGroup.querySelector('.currency-input');
+    if (newInput) {
+        newInput._subTotalHandler = function() { updateSubTotal(this); };
+        newInput.addEventListener('input', newInput._subTotalHandler);
+    }
+    updateSubTotal(section);
+}
+
+function deleteItem(btn) {
+    const section = btn.closest('.form-section');
+    const formGroup = btn.closest('.form-group');
+    formGroup.remove();
+    updateSubTotal(section);
+}
+
+function updateSummarySentence() {
+    // Get income from the summary-income cell (subtotal)
+    const incomeText = document.getElementById('summary-income')?.textContent || '$ 0.00';
+    const income = parseFloat(incomeText.replace(/[^\d.\-]/g, '')) || 0;
+    // Sum all expense categories
+    const expenseIds = [
+        'summary-housing',
+        'summary-credit',
+        'summary-loans',
+        'summary-vehicle',
+        'summary-studentloan',
+        'summary-utilities',
+        'summary-insurance',
+        'summary-subscriptions'
+    ];
+    let totalExpenses = 0;
+    expenseIds.forEach(id => {
+        const val = document.getElementById(id)?.textContent || '$ 0.00';
+        totalExpenses += parseFloat(val.replace(/[^\d.\-]/g, '')) || 0;
+    });
+    // Update total income and expense rows
+    const totalIncomeEl = document.getElementById('summary-total-income');
+    if (totalIncomeEl) {
+        totalIncomeEl.textContent = `$ ${income.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    }
+    const totalExpenseEl = document.getElementById('summary-total-expense');
+    if (totalExpenseEl) {
+        totalExpenseEl.textContent = `$ ${totalExpenses.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    }
+    // Update difference and message
+    const diff = income - totalExpenses;
+    const diffEl = document.getElementById('summary-diff');
+    if (diffEl) {
+        diffEl.textContent = `$ ${Math.abs(diff).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    }
+    const diffMsgEl = document.getElementById('summary-diff-msg');
+    if (diffMsgEl) {
+        if (diff > 0) {
+            diffMsgEl.textContent = `You have $${diff.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} left.`;
+            diffMsgEl.style.color = '#007bff';
+        } else if (diff < 0) {
+            diffMsgEl.textContent = `You are short $${Math.abs(diff).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}.`;
+            diffMsgEl.style.color = '#dc3545';
+        } else {
+            diffMsgEl.textContent = '';
+            diffMsgEl.style.color = '';
+        }
+    }
+    let sentence = '';
+    if (income === 0 && totalExpenses === 0) {
+        sentence = '';
+    } else if (diff > 0) {
+        sentence = `You are saving $${diff.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} per month.`;
+    } else if (diff < 0) {
+        sentence = `Your expenses exceed your income by $${Math.abs(diff).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} per month.`;
+    } else {
+        sentence = 'Your income and expenses are balanced.';
+    }
+    const el = document.getElementById('summary-sentence');
+    if (el) el.textContent = sentence;
+}
+
+function updateSubTotal(inputOrSection) {
+    let section;
+    if (inputOrSection.classList.contains('form-section')) {
+        section = inputOrSection;
+    } else {
+        section = inputOrSection.closest('.form-section');
+    }
+    const amountInputs = section.querySelectorAll('.currency-input');
+    let sum = 0;
+    amountInputs.forEach(input => {
+        const val = parseFloat(input.value);
+        if (!isNaN(val)) sum += val;
+    });
+    const subTotalValue = section.querySelector('.sub-total-value');
+    if (subTotalValue) {
+        subTotalValue.textContent = `$ ${sum.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    }
+    // Update summary table if present
+    const sectionName = section.getAttribute('data-section');
+    const summaryCell = document.getElementById(`summary-${sectionName}`);
+    if (summaryCell) {
+        summaryCell.textContent = `$ ${sum.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    }
+    updateSummarySentence();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.form-section').forEach(section => {
+        bindAndUpdateSection(section);
+    });
+});
+
+// Bar chart rendering for category subtotals (was pie chart)
+let summaryBarChart = null;
+function updateSummaryBarChart() {
+    const ctx = document.getElementById('summary-pie');
+    if (!ctx) return;
+    const categories = [
+        { id: 'summary-housing', label: 'HOUSING' },
+        { id: 'summary-credit', label: 'CREDIT & INSTALLMENT PAYMENTS' },
+        { id: 'summary-loans', label: 'PERSONAL LOANS' },
+        { id: 'summary-vehicle', label: 'VEHICLE EXPENSES' },
+        { id: 'summary-studentloan', label: 'STUDENT LOAN' },
+        { id: 'summary-utilities', label: 'UTILITIES & TELECOM' },
+        { id: 'summary-insurance', label: 'INSURANCE' },
+        { id: 'summary-subscriptions', label: 'SUBSCRIPTIONS' }
+    ];
+    // Get values and sort descending
+    let data = categories.map(cat => {
+        const valText = document.getElementById(cat.id)?.textContent || '$ 0.00';
+        const val = parseFloat(valText.replace(/[^\d.\-]/g, '')) || 0;
+        return { label: cat.label, value: val };
+    });
+    data = data.filter(d => d.value > 0);
+    data.sort((a, b) => b.value - a.value);
+    const labels = data.map(d => d.label);
+    const values = data.map(d => d.value);
+    const colors = [
+        '#3b6eea', '#5f8fff', '#764ba2', '#4fd1c5', '#f6ad55', '#fc8181', '#90cdf4', '#a0aec0'
+    ];
+    if (summaryBarChart) summaryBarChart.destroy();
+    summaryBarChart = new window.Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: values,
+                backgroundColor: colors.slice(0, values.length),
+                borderWidth: 1.5,
+                borderColor: '#fff',
+                borderRadius: 8,
+                maxBarThickness: 38
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.parsed.x || 0;
+                            return `$${value.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+                        }
+                    }
+                },
+                datalabels: {
+                    color: '#222',
+                    font: { weight: 'bold', size: 14 },
+                    anchor: 'end',
+                    align: 'end',
+                    formatter: function(value) {
+                        return `$${value.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: { color: '#222', font: { size: 13 } },
+                    grid: { color: '#e1e5e9' }
+                },
+                y: {
+                    ticks: { color: '#222', font: { size: 14, weight: 'bold' } },
+                    grid: { display: false }
+                }
+            }
+        },
+        plugins: window.ChartDataLabels ? [window.ChartDataLabels] : []
+    });
+}
+
+// Update bar chart whenever subtotals change
+const _originalUpdateSummarySentence = updateSummarySentence;
+updateSummarySentence = function() {
+    _originalUpdateSummarySentence();
+    updateSummaryBarChart();
+};
+
+// Accordion expand/collapse logic
+function toggleAccordion(header) {
+    const item = header.parentElement;
+    const content = item.querySelector('.accordion-content');
+    const chevron = header.querySelector('.accordion-chevron');
+    const isOpen = content.style.display === 'block';
+
+    // Close all other sections
+    document.querySelectorAll('.accordion-content').forEach(c => c.style.display = 'none');
+    document.querySelectorAll('.accordion-chevron').forEach(ch => ch.style.transform = 'rotate(0deg)');
+
+    if (!isOpen) {
+        content.style.display = 'block';
+        chevron.style.transform = 'rotate(180deg)';
+    }
+} 

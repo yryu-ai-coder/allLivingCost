@@ -6,7 +6,7 @@
 
 body {
     font-family: 'Noto Sans KR', sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #fff;
     min-height: 100vh;
     padding: 20px;
 }
@@ -14,17 +14,19 @@ body {
 .container {
     max-width: 800px;
     margin: 0 auto;
-    background: white;
-    border-radius: 20px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    background: #fff;
+    border-radius: 28px;
+    box-shadow: 0 8px 32px 0 rgba(59,110,234,0.10), 0 1.5px 8px 0 rgba(59,110,234,0.06);
     overflow: hidden;
+    backdrop-filter: none;
 }
 
 header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #3b6eea;
     color: white;
     text-align: center;
     padding: 40px 20px;
+    border-radius: 24px 24px 0 0;
 }
 
 header h1 {
@@ -41,33 +43,48 @@ header p {
 }
 
 .form-container {
-    padding: 40px;
+    padding: 48px 40px 40px 40px;
+    background: transparent;
 }
 
 .form-section {
-    margin-bottom: 40px;
-    padding: 30px;
-    background: #f8f9fa;
-    border-radius: 15px;
-    border-left: 5px solid #667eea;
+    margin-bottom: 44px;
+    padding: 36px 32px 32px 32px;
+    background: #f4f8ff;
+    border-radius: 18px;
+    border: 1.5px solid #e1e5e9;
+    box-shadow: 0 2px 12px 0 rgba(59,110,234,0.06);
+    transition: box-shadow 0.2s, border-color 0.2s, transform 0.2s;
+    position: relative;
+}
+.form-section:hover {
+    box-shadow: 0 6px 24px 0 rgba(59,110,234,0.12);
+    border-color: #bfc9e6;
+    transform: translateY(-2px) scale(1.01);
 }
 
 .form-section h2 {
-    color: #333;
-    font-size: 1.4rem;
-    margin-bottom: 25px;
-    font-weight: 600;
+    color: #2a3a5e;
+    font-size: 1.35rem;
+    margin-bottom: 28px;
+    font-weight: 800;
     display: flex;
     align-items: center;
+    letter-spacing: 0.01em;
+    background: none;
+    -webkit-background-clip: initial;
+    -webkit-text-fill-color: initial;
+    background-clip: initial;
 }
 
 .form-section h2::before {
     content: '';
-    width: 4px;
-    height: 20px;
-    background: #667eea;
-    margin-right: 10px;
-    border-radius: 2px;
+    width: 6px;
+    height: 26px;
+    background: #e1e5e9;
+    margin-right: 14px;
+    border-radius: 3px;
+    box-shadow: none;
 }
 
 .form-group {
@@ -106,32 +123,38 @@ header p {
 
 .form-actions {
     display: flex;
-    gap: 15px;
+    gap: 32px;
     justify-content: center;
-    margin-top: 40px;
-    padding-top: 30px;
+    margin-top: 48px;
+    padding-top: 36px;
     border-top: 2px solid #f0f0f0;
+    margin-bottom: 40px;
+    padding-bottom: 32px;
 }
 
 .btn-submit, .btn-reset {
-    padding: 15px 30px;
+    padding: 18px 38px;
     border: none;
-    border-radius: 10px;
-    font-size: 1rem;
-    font-weight: 600;
+    border-radius: 16px;
+    font-size: 1.13rem;
+    font-weight: 700;
     cursor: pointer;
-    transition: all 0.3s ease;
-    min-width: 150px;
+    transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+    min-width: 170px;
+    box-shadow: none;
 }
 
 .btn-submit {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: linear-gradient(90deg, #3b6eea 0%, #5f8fff 100%);
+    color: #fff;
+    box-shadow: 0 4px 16px 0 rgba(59,110,234,0.13);
+    border: none;
 }
 
 .btn-submit:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    transform: translateY(-3px) scale(1.04);
+    box-shadow: 0 8px 24px 0 rgba(59,110,234,0.18);
+    background: linear-gradient(90deg, #2a5be7 0%, #3b6eea 100%);
 }
 
 .btn-reset {
@@ -142,7 +165,7 @@ header p {
 
 .btn-reset:hover {
     background: #e9ecef;
-    transform: translateY(-2px);
+    transform: translateY(-2px) scale(1.02);
 }
 
 .message {
@@ -260,4 +283,130 @@ header p {
 
 @keyframes spin {
     to { transform: rotate(360deg); }
+}
+
+/* Unified summary card style for dashboard and table */
+.summary-card {
+  width: 100%;
+  max-width: 640px;
+  background: #f7f9fc;
+  border: 1.5px solid #e1e5e9;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(102,126,234,0.06);
+  padding: 32px 40px;
+}
+.dashboard-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.summary-table-row {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+.summary-table {
+  width: 100%;
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+  max-width: 100%;
+  margin-left: 0;
+  table-layout: auto;
+}
+.summary-table th, .summary-table td {
+  text-align: left;
+}
+
+.summary-sentence {
+    margin-bottom: 18px;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #3b6eea;
+    text-align: center;
+    letter-spacing: 0.01em;
+}
+
+.summary-pie-container {
+    margin-top: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Accordion styles */
+.accordion {
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 24px;
+  background: none;
+}
+.accordion-item {
+  border: 1.5px solid #e1e5e9;
+  border-radius: 12px;
+  margin-bottom: 18px;
+  background: #f7f9fc;
+  box-shadow: 0 2px 8px rgba(102,126,234,0.06);
+}
+.accordion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 28px;
+  font-size: 1.18rem;
+  font-weight: 600;
+  color: #3b6eea;
+  background: #f0f4ff;
+  cursor: pointer;
+  border-radius: 12px 12px 0 0;
+  user-select: none;
+  transition: background 0.2s;
+}
+.accordion-header:hover {
+  background: #e6edff;
+}
+.accordion-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.accordion-chevron {
+  font-size: 1.3rem;
+  color: #667eea;
+  transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+}
+.accordion-content {
+  padding: 24px 28px 18px 28px;
+  background: #f7f9fc;
+  border-radius: 0 0 12px 12px;
+  border-top: 1.5px solid #e1e5e9;
+  transition: max-height 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+
+.dashboard-title {
+  font-size: 1.18rem;
+  font-weight: 700;
+  color: #3b6eea;
+  margin-bottom: 12px;
+  letter-spacing: 0.01em;
+  text-align: center;
+}
+
+.summary-table-title {
+  font-size: 1.18rem;
+  font-weight: 700;
+  color: #3b6eea;
+  margin-bottom: 12px;
+  letter-spacing: 0.01em;
+  text-align: center;
+}
+
+.summary-diff-msg {
+  display: block;
+  text-align: center;
+  font-size: 1.08rem;
+  margin-top: 6px;
+  font-weight: 600;
 } 

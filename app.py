@@ -8,26 +8,27 @@ from google.oauth2.service_account import Credentials
 from google.auth.exceptions import GoogleAuthError
 import logging
 import traceback
+import re
 
-# 로깅 설정
+# Logging setup
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-CORS(app)  # CORS 활성화
+CORS(app)  # Enable CORS
 
-# Google Sheets API 설정
+# Google Sheets API settings
 SCOPES = [
     'https://www.googleapis.com/auth/spreadsheets',
     'https://www.googleapis.com/auth/drive'
 ]
 
-# 환경 변수에서 설정 가져오기 (실제 배포 시 사용)
+# Get settings from environment variables (for production)
 SPREADSHEET_ID = os.getenv('SPREADSHEET_ID', '1g9ON1er2l3pDw2ZnOrz_NjOcISviK01wvYSmi9SXL5Y')
 CREDENTIALS_FILE = os.getenv('GOOGLE_CREDENTIALS_FILE', 'alllivingcost-d74bb901a04e.json')
 
 def get_google_sheets_client():
-    """Google Sheets 클라이언트 생성"""
+    """Create Google Sheets client"""
     try:
         creds = Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=SCOPES)
         client = gspread.authorize(creds)
@@ -40,157 +41,156 @@ def get_google_sheets_client():
         return None
 
 def save_to_google_sheets(data):
-    """Google Sheets에 데이터 저장"""
+    """Save data to Google Sheets (well-designed table: group by category, add headers, format for readability)"""
     try:
         client = get_google_sheets_client()
         if not client:
-            # 개발 환경에서는 로컬 파일에 저장
             return save_to_local_file(data)
-        
-        # 스프레드시트 열기
+
         spreadsheet = client.open_by_key(SPREADSHEET_ID)
-        worksheet = spreadsheet.sheet1
-        
-        # 헤더가 없으면 추가
-        headers = [
-            'Date', 'Timestamp', 'Mortgage', 'Internet', 'HOA', 'Garbage', 
-            'Water', 'Electric', 'Personal Loan', 'Credit Debt', 'Student Loan',
-            'Car Payment', 'Subscription', 'Insurance', 'Income',
-            'Total Costs', 'Net Income', 'Savings Rate', 'Financial Health'
+        # Always create a new sheet with a unique name (date + time)
+        now = datetime.now()
+        sheet_name = now.strftime("%Y-%m-%d_%H-%M-%S")
+        worksheet = spreadsheet.add_worksheet(title=sheet_name, rows="100", cols="20")
+
+        # 카테고리 정의
+        categories = [
+            ("INCOME", "income"),
+            ("HOUSING", "housing"),
+            ("CREDIT & INSTALLMENT PAYMENTS", "credit"),
+            ("PERSONAL LOANS", "loans"),
+            ("VEHICLE EXPENSES", "vehicle"),
+            ("STUDENT LOAN", "studentloan"),
+            ("UTILITIES & TELECOM", "utilities"),
+            ("INSURANCE", "insurance"),
+            ("SUBSCRIPTIONS", "subscriptions"),
         ]
-        
-        # 첫 번째 행이 비어있으면 헤더 추가
-        if not worksheet.row_values(1):
-            worksheet.append_row(headers)
-        
-        # 데이터 행 준비
-        row_data = [
-            data.get('date', ''),
-            data.get('timestamp', ''),
-            data.get('mortgage', 0),
-            data.get('internet', 0),
-            data.get('hoa', 0),
-            data.get('garbage', 0),
-            data.get('water', 0),
-            data.get('electric', 0),
-            data.get('personalLoan', 0),
-            data.get('creditDebt', 0),
-            data.get('studentLoan', 0),
-            data.get('carPayment', 0),
-            data.get('subscription', 0),
-            data.get('insurance', 0),
-            data.get('income', 0),
-            data.get('analysis', {}).get('totalCosts', 0),
-            data.get('analysis', {}).get('netIncome', 0),
-            data.get('analysis', {}).get('savingsRate', 0),
-            'Healthy' if data.get('analysis', {}).get('isHealthy', False) else 'Needs Attention'
-        ]
-        
-        # 데이터 추가
-        worksheet.append_row(row_data)
-        
-        logger.info(f"Data saved to Google Sheets successfully")
+
+        rows = []
+        rows.append(["Date", data.get("date", ""), "Timestamp", data.get("timestamp", "")])
+        for cat_name, cat_key in categories:
+            items = []
+            i = 0
+            while True:
+                item_key = f"item_{cat_key}_{i}"
+                amount_key = f"{cat_key}_{i}"
+                if item_key in data:
+                    item_name = data[item_key]
+                    amount = data.get(amount_key, "")
+                    items.append((item_name, amount))
+                    i += 1
+                else:
+                    break
+            if items:
+                rows.append([cat_name])
+                rows.append(["Item", "Amount"])
+                for item_name, amount in items:
+                    rows.append([item_name, amount])
+                rows.append([""])
+
+        worksheet.append_rows(rows, value_input_option="USER_ENTERED")
+        logger.info(f"Data saved to Google Sheets in new sheet: {sheet_name}")
         return True
-        
     except Exception as e:
         logger.error(f"Error saving to Google Sheets: {e}")
         print(traceback.format_exc())
         return False
 
 def save_to_local_file(data):
-    """로컬 파일에 데이터 저장 (개발용)"""
+    """Save data to local file (for development)"""
     try:
         filename = 'living_cost_data.json'
-        
-        # 기존 데이터 읽기
+
+        # Read existing data
         existing_data = []
         if os.path.exists(filename):
             with open(filename, 'r', encoding='utf-8') as f:
                 existing_data = json.load(f)
-        
-        # 새 데이터 추가
+
+        # Add new data
         existing_data.append(data)
-        
-        # 파일에 저장
+
+        # Save to file
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(existing_data, f, ensure_ascii=False, indent=2)
-        
+
         logger.info(f"Data saved to local file: {filename}")
         return True
-        
     except Exception as e:
         logger.error(f"Error saving to local file: {e}")
         return False
 
 @app.route('/')
 def index():
-    """메인 페이지"""
+    """Main page"""
     return send_from_directory('.', 'index.html')
 
 @app.route('/<path:filename>')
 def static_files(filename):
-    """정적 파일 서빙"""
+    """Serve static files"""
     return send_from_directory('.', filename)
 
 @app.route('/api/save-data', methods=['POST'])
 def save_data():
-    """데이터 저장 API"""
+    """Data save API"""
     try:
         data = request.get_json()
-        
+        logger.info(f"[save_data] Received data: {data}")  # Log received data
+
         if not data:
-            return jsonify({'success': False, 'error': '데이터가 없습니다.'}), 400
-        
-        # 필수 필드 검증
-        required_fields = [
-            'mortgage', 'internet', 'hoa', 'garbage', 'water', 
-            'electric', 'personalLoan', 'creditDebt', 'studentLoan',
-            'carPayment', 'subscription', 'insurance', 'income'
-        ]
-        
-        for field in required_fields:
-            if field not in data or data[field] is None:
-                return jsonify({'success': False, 'error': f'{field} 필드가 필요합니다.'}), 400
-        
-        # 데이터 저장
+            logger.error("[save_data] No data provided.")
+            return jsonify({'success': False, 'error': 'No data provided.'}), 400
+
+        # Required field validation
+        item_titles = [k for k in data.keys() if k.startswith('item_')]
+        for item in item_titles:
+            amount_key = item.replace('item_', '')
+            if amount_key not in data or data[amount_key] is None:
+                logger.error(f"[save_data] Amount for {data[item]} is required.")
+                return jsonify({'success': False, 'error': f'Amount for {data[item]} is required.'}), 400
+
+        logger.info("[save_data] Calling save_to_google_sheets...")
+        # Save data
         success = save_to_google_sheets(data)
-        
+        logger.info(f"[save_data] save_to_google_sheets returned: {success}")
+
         if success:
+            logger.info("[save_data] Returning success response to client.")
             return jsonify({
                 'success': True,
-                'message': '데이터가 성공적으로 저장되었습니다.',
+                'message': 'Data saved successfully.',
                 'data': data
             })
         else:
+            logger.error("[save_data] Failed to save data.")
             return jsonify({
                 'success': False,
-                'error': '데이터 저장에 실패했습니다.'
+                'error': 'Failed to save data.'
             }), 500
-            
     except Exception as e:
-        logger.error(f"Error in save_data endpoint: {e}")
+        logger.error(f"[save_data] Error in save_data endpoint: {e}")
         print(traceback.format_exc())
         return jsonify({
             'success': False,
-            'error': f'서버 오류가 발생했습니다. {str(e)}'
+            'error': f'Server error occurred. {str(e)}'
         }), 500
 
 @app.route('/api/get-data', methods=['GET'])
 def get_data():
-    """저장된 데이터 조회 API"""
+    """Get saved data API"""
     try:
         client = get_google_sheets_client()
-        
+
         if client:
-            # Google Sheets에서 데이터 읽기
+            # Read data from Google Sheets
             spreadsheet = client.open_by_key(SPREADSHEET_ID)
             worksheet = spreadsheet.sheet1
-            
-            # 모든 데이터 가져오기
+
+            # Get all data
             all_data = worksheet.get_all_records()
             return jsonify({'success': True, 'data': all_data})
         else:
-            # 로컬 파일에서 데이터 읽기
+            # Read data from local file
             filename = 'living_cost_data.json'
             if os.path.exists(filename):
                 with open(filename, 'r', encoding='utf-8') as f:
@@ -198,17 +198,16 @@ def get_data():
                 return jsonify({'success': True, 'data': data})
             else:
                 return jsonify({'success': True, 'data': []})
-                
     except Exception as e:
         logger.error(f"Error in get_data endpoint: {e}")
         return jsonify({
             'success': False,
-            'error': '데이터 조회에 실패했습니다.'
+            'error': 'Failed to get data.'
         }), 500
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
-    """헬스 체크 API"""
+    """Health check API"""
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
@@ -216,15 +215,15 @@ def health_check():
     })
 
 if __name__ == '__main__':
-    # 개발 환경 설정
+    # Development environment settings
     port = int(os.environ.get('PORT', 5000))
     debug = os.environ.get('FLASK_ENV') == 'development'
-    
+
     print("=" * 50)
-    print("AllLivingCost 서버 시작")
+    print("AllLivingCost server started")
     print("=" * 50)
-    print(f"서버 주소: http://localhost:{port}")
-    print(f"Google Sheets 연결: {'연결됨' if get_google_sheets_client() else '연결 안됨 (개발 모드)'}")
+    print(f"Server address: http://localhost:{port}")
+    print(f"Google Sheets connection: {'Connected' if get_google_sheets_client() else 'Not connected (dev mode)'}")
     print("=" * 50)
-    
+
     app.run(host='0.0.0.0', port=port, debug=debug) 
