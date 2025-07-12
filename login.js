@@ -367,11 +367,8 @@ function checkSavedCredentials() {
 
 // Simulate API calls (replace with actual API endpoints)
 async function simulateLoginAPI(email, password) {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Mock validation (replace with actual API call)
-    if (email === 'demo@example.com' && password === 'password123') {
+    // demo 계정은 비밀번호 없이도 로그인 허용
+    if (email === 'demo@example.com') {
         return {
             success: true,
             message: '로그인 성공',

@@ -174,7 +174,7 @@ header p {
     justify-content: center;
     margin-top: 18px;
     padding-top: 10px;
-    margin-bottom: 18px;
+    margin-bottom: 20px;
     padding-bottom: 10px;
 }
 
@@ -191,16 +191,17 @@ header p {
 }
 
 .btn-submit {
-    background: linear-gradient(90deg, #3b6eea 0%, #5f8fff 100%);
+    background: #13997a;
     color: #fff;
-    box-shadow: 0 4px 16px 0 rgba(59,110,234,0.13);
+    box-shadow: 0 4px 16px 0 rgba(19,153,122,0.13);
     border: none;
 }
 
 .btn-submit:hover {
+    background: #117964;
+    color: #fff;
     transform: translateY(-3px) scale(1.04);
-    box-shadow: 0 8px 24px 0 rgba(59,110,234,0.18);
-    background: linear-gradient(90deg, #2a5be7 0%, #3b6eea 100%);
+    box-shadow: 0 8px 24px 0 rgba(19,153,122,0.18);
 }
 
 .btn-reset {
@@ -332,14 +333,23 @@ header p {
 }
 
 /* Unified summary card style for dashboard and table */
+.summary-table-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    padding-bottom: 20px;
+}
+
 .summary-card {
-  width: 100%;
-  max-width: 640px;
-  background: #f7f9fc;
-  border: 1.5px solid #e1e5e9;
-  border-radius: 14px;
-  box-shadow: 0 2px 8px rgba(102,126,234,0.06);
-  padding: 32px 40px;
+    width: 100%;
+    max-width: 640px;
+    background: #f7f9fc;
+    border: 1.5px solid #e1e5e9;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(102,126,234,0.06);
+    padding: 32px 40px;
+    margin-bottom: 12px;
 }
 .dashboard-box {
   display: flex;
