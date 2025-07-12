@@ -25,22 +25,27 @@
         </header>
 
         <form id="livingCostForm" class="form-container">
-            <div class="sheet-retrieve-row-modern">
-                <select id="sheetSelect" class="sheet-select-modern"></select>
-                <button type="button" id="loadSheetBtn" class="load-sheet-btn-modern">Load</button>
+            <div class="sexy-controls">
+                <div class="sexy-controls-left">
+                    <button type="button" class="sexy-btn sexy-new" onclick="resetForm()" aria-label="New">
+                        <span class="sexy-icon">➕</span> New
+                    </button>
+                </div>
+                <div class="sexy-controls-center">
+                    <select id="sheetSelect" class="sexy-select" aria-label="Select Sheet"></select>
+                    <button type="button" id="loadSheetBtn" class="sexy-btn sexy-load" aria-label="Load">Load</button>
+                </div>
+                <div class="sexy-controls-right">
+                    <button type="button" class="sexy-icon-btn" onclick="expandAllAccordions()" aria-label="Expand All">
+                        <span class="sexy-icon">▼</span>
+                    </button>
+                    <button type="button" class="sexy-icon-btn" onclick="collapseAllAccordions()" aria-label="Collapse All">
+                        <span class="sexy-icon">▲</span>
+                    </button>
+                </div>
             </div>
             <div id="selectedSheetLabel" class="selected-sheet-label-modern"></div>
             <div class="accordion">
-                <div class="accordion-controls">
-                    <button type="button" class="expand-all-btn" onclick="expandAllAccordions()">
-                        <span class="purple-arrow down"></span>
-                        <span class="expand-tooltip">Expand All</span>
-                    </button>
-                    <button type="button" class="collapse-all-btn" onclick="collapseAllAccordions()">
-                        <span class="purple-arrow up"></span>
-                        <span class="collapse-tooltip">Collapse All</span>
-                    </button>
-                </div>
                 <div class="accordion-item">
                     <div class="accordion-header" onclick="toggleAccordion(this)">
                         <span class="accordion-title">💵 INCOME</span>
@@ -512,7 +517,6 @@
             </div>
             <div class="form-actions">
                 <button type="submit" class="btn-submit">Save Data</button>
-                <button type="button" class="btn-reset" onclick="resetForm()">Reset Form</button>
             </div>
             <div id="message" class="message" style="display: none; margin-top: 16px; font-size: 1.1rem; text-align: center;"></div>
         </form>

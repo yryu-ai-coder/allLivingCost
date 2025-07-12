@@ -26,6 +26,13 @@ function resetForm() {
         input.style.transform = 'translateY(0)';
     });
     
+    // Select Sheet 드롭다운을 항상 placeholder로 초기화
+    const select = document.getElementById('sheetSelect');
+    if (select) select.selectedIndex = 0;
+    // Selected Sheet 라벨도 초기화
+    const label = document.getElementById('selectedSheetLabel');
+    if (label) label.textContent = '';
+    
     showMessage('Form has been reset.', 'success');
 }
 
@@ -101,11 +108,20 @@ form.addEventListener('submit', async function(e) {
 
     // Selected Sheet에서 날짜 추출해 date 필드로 세팅
     const label = document.getElementById('selectedSheetLabel');
+    let useCurrentDate = false;
     if (label && label.textContent.includes(':')) {
         const selectedDate = label.textContent.split(':')[1].trim();
         if (selectedDate) {
             formData.set('date', selectedDate);
+        } else {
+            useCurrentDate = true;
         }
+    } else {
+        useCurrentDate = true;
+    }
+    if (useCurrentDate) {
+        // Select Sheet가 선택되어 있지 않으면 오늘 날짜로 저장
+        formData.set('date', new Date().toISOString().split('T')[0]);
     }
 
     const data = {};
@@ -236,82 +252,70 @@ async function loadSheetNames() {
 
 // 시트 데이터를 폼에 반영하는 함수
 function applySheetDataToForm(sheetData) {
-    console.log('applySheetDataToForm에 전달된 sheetData:', sheetData); // 디버깅용
-    if (!Array.isArray(sheetData) || sheetData.length === 0) return;
-
-    // 1. Date 행에서 날짜 추출
-    let i = 0;
-    let sheetDate = null;
-    if (sheetData[0][0] === 'Date') {
-        sheetDate = sheetData[0][1];
-        i++;
-    }
-    resetForm();
-    // 날짜 필드 제거, 대신 시트명 표시
-    const label = document.getElementById('selectedSheetLabel');
-    if (sheetDate && label) {
-        label.textContent = `Selected Sheet: ${sheetDate}`;
-    } else if (label) {
-        label.textContent = '';
-    }
-
-    let sectionMap = {
-        'INCOME': 'income',
-        'HOUSING': 'housing',
-        'CREDIT & INSTALLMENT PAYMENTS': 'credit',
-        'PERSONAL LOANS': 'loans',
-        'VEHICLE EXPENSES': 'vehicle',
-        'STUDENT LOAN': 'studentloan',
-        'UTILITIES & TELECOM': 'utilities',
-        'INSURANCE': 'insurance',
-        'SUBSCRIPTIONS': 'subscriptions',
-    };
-
-    while (i < sheetData.length) {
-        const row = sheetData[i];
-        if (row.length >= 1 && sectionMap[row[0]]) {
-            const sectionKey = sectionMap[row[0]];
-            i++;
-            if (sheetData[i] && sheetData[i][0] === 'Item') i++;
-            let itemIdx = 0;
+    // JSON 기반 데이터 로딩
+    if (Array.isArray(sheetData) && sheetData.length > 0 && typeof sheetData[0][0] === 'string' && sheetData[0][0].trim().startsWith('{')) {
+        let data;
+        try {
+            data = JSON.parse(sheetData[0][0]);
+        } catch (e) {
+            showMessage('Failed to parse sheet data.', 'error');
+            return;
+        }
+        resetForm();
+        // 날짜 라벨 표시
+        const label = document.getElementById('selectedSheetLabel');
+        if (data.date && label) {
+            label.textContent = `Selected Sheet: ${data.date}`;
+        } else if (label) {
+            label.textContent = '';
+        }
+        // 카테고리별 동적 항목만 채우기
+        const sectionMap = {
+            'income': 'INCOME',
+            'housing': 'HOUSING',
+            'credit': 'CREDIT & INSTALLMENT PAYMENTS',
+            'loans': 'PERSONAL LOANS',
+            'vehicle': 'VEHICLE EXPENSES',
+            'studentloan': 'STUDENT LOAN',
+            'utilities': 'UTILITIES & TELECOM',
+            'insurance': 'INSURANCE',
+            'subscriptions': 'SUBSCRIPTIONS',
+        };
+        Object.keys(sectionMap).forEach(sectionKey => {
             const section = document.querySelector(`.form-section[data-section="${sectionKey}"]`);
-            if (section) {
-                section.querySelectorAll('.form-group.currency-input-group').forEach((el, idx) => {
-                    if (idx > 0) el.remove();
-                });
-            }
-            while (
-                i < sheetData.length &&
-                sheetData[i].length >= 2 &&
-                sheetData[i][0] &&
-                (sheetData[i][1] || sheetData[i][1] === "" || sheetData[i][1] === "0")
-            ) {
-                const item = sheetData[i][0];
-                const amount = sheetData[i][1];
-                if (itemIdx === 0) {
-                    if (section) {
-                        section.querySelector('.item-title').value = item;
-                        section.querySelector('.currency-input').value = amount;
-                    }
-                } else {
-                    if (section) {
+            if (!section) return;
+            // 기존 항목 모두 삭제 (첫 번째만 남김)
+            section.querySelectorAll('.form-group.currency-input-group').forEach((el, idx) => {
+                if (idx > 0) el.remove();
+            });
+            // 동적 항목 채우기
+            let i = 0;
+            while (true) {
+                const itemKey = `item_${sectionKey}_${i}`;
+                const amountKey = `${sectionKey}_${i}`;
+                if (data[itemKey] !== undefined && data[amountKey] !== undefined) {
+                    if (i === 0) {
+                        section.querySelector('.item-title').value = data[itemKey];
+                        section.querySelector('.currency-input').value = data[amountKey];
+                    } else {
                         addItem(section.querySelector('.add-item-btn'));
                         const groups = section.querySelectorAll('.form-group.currency-input-group');
                         const lastGroup = groups[groups.length - 1];
-                        lastGroup.querySelector('.item-title').value = item;
-                        lastGroup.querySelector('.currency-input').value = amount;
+                        lastGroup.querySelector('.item-title').value = data[itemKey];
+                        lastGroup.querySelector('.currency-input').value = data[amountKey];
                     }
+                    i++;
+                } else {
+                    break;
                 }
-                itemIdx++;
-                i++;
             }
-        } else {
-            i++;
-        }
+        });
+        document.querySelectorAll('.form-section').forEach(section => {
+            updateSubTotal(section);
+        });
+        return;
     }
-    document.querySelectorAll('.form-section').forEach(section => {
-        updateSubTotal(section);
-    });
+    // (이전 표 파싱 로직은 제거)
 }
 
 // 시트 데이터 불러오기 및 콘솔 출력 (폼 반영은 후처리)

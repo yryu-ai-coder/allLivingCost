@@ -51,55 +51,21 @@ def save_to_google_sheets(data):
         # Use only date (YYYY-MM-DD) as sheet name, even if data['date'] has time
         raw_date = data.get("date")
         if raw_date:
-            # '2025-07-09T12:34:56' 또는 '2025-07-09_21-39-36' 등 어떤 값이 와도 '2025-07-09'만 추출
             sheet_name = str(raw_date).split('T')[0].split('_')[0]
         else:
             sheet_name = datetime.now().strftime("%Y-%m-%d")
         worksheet = None
-        # Check if sheet exists
         try:
             worksheet = spreadsheet.worksheet(sheet_name)
             worksheet.clear()  # Overwrite: clear existing content
         except gspread.exceptions.WorksheetNotFound:
             worksheet = spreadsheet.add_worksheet(title=sheet_name, rows="100", cols="20")
 
-        # 카테고리 정의
-        categories = [
-            ("INCOME", "income"),
-            ("HOUSING", "housing"),
-            ("CREDIT & INSTALLMENT PAYMENTS", "credit"),
-            ("PERSONAL LOANS", "loans"),
-            ("VEHICLE EXPENSES", "vehicle"),
-            ("STUDENT LOAN", "studentloan"),
-            ("UTILITIES & TELECOM", "utilities"),
-            ("INSURANCE", "insurance"),
-            ("SUBSCRIPTIONS", "subscriptions"),
-        ]
-
-        rows = []
-        rows.append(["Date", data.get("date", ""), "Timestamp", data.get("timestamp", "")])
-        for cat_name, cat_key in categories:
-            items = []
-            i = 0
-            while True:
-                item_key = f"item_{cat_key}_{i}"
-                amount_key = f"{cat_key}_{i}"
-                if item_key in data:
-                    item_name = data[item_key]
-                    amount = data.get(amount_key, "")
-                    items.append((item_name, amount))
-                    i += 1
-                else:
-                    break
-            if items:
-                rows.append([cat_name])
-                rows.append(["Item", "Amount"])
-                for item_name, amount in items:
-                    rows.append([item_name, amount])
-                rows.append([""])
-
-        worksheet.append_rows(rows, value_input_option="USER_ENTERED")
-        logger.info(f"Data saved to Google Sheets in sheet: {sheet_name} (overwrite if existed)")
+        # 오직 A1에 전체 데이터를 JSON 문자열로 저장
+        import json
+        json_str = json.dumps(data, ensure_ascii=False, indent=2)
+        worksheet.update('A1', [[json_str]])
+        logger.info(f"Data saved to Google Sheets in sheet: {sheet_name} (JSON only in A1)")
         return True
     except Exception as e:
         logger.error(f"Error saving to Google Sheets: {e}")
