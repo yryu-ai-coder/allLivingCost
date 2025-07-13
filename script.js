@@ -392,6 +392,7 @@ function bindAndUpdateSection(section) {
 function addItem(btn) {
     const section = btn.closest('.form-section');
     const sectionName = section.getAttribute('data-section');
+    // 기존 입력값을 모두 보존 (아무것도 건드리지 않음)
     const formGroups = section.querySelectorAll('.form-group.currency-input-group');
     const itemCount = formGroups.length;
     const itemName = `item_${sectionName}_${itemCount}`;
