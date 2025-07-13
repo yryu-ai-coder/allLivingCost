@@ -298,11 +298,7 @@ function applySheetDataToForm(sheetData) {
                         section.querySelector('.item-title').value = data[itemKey];
                         section.querySelector('.currency-input').value = data[amountKey];
                     } else {
-                        addItem(section.querySelector('.add-item-btn'));
-                        const groups = section.querySelectorAll('.form-group.currency-input-group');
-                        const lastGroup = groups[groups.length - 1];
-                        lastGroup.querySelector('.item-title').value = data[itemKey];
-                        lastGroup.querySelector('.currency-input').value = data[amountKey];
+                        addItem(section.querySelector('.add-item-btn'), data[itemKey], data[amountKey]);
                     }
                     i++;
                 } else {
@@ -389,10 +385,9 @@ function bindAndUpdateSection(section) {
 }
 
 // Add item logic for dynamic item addition
-function addItem(btn) {
+function addItem(btn, itemValue = '', amountValue = '') {
     const section = btn.closest('.form-section');
     const sectionName = section.getAttribute('data-section');
-    // 기존 입력값을 모두 보존 (아무것도 건드리지 않음)
     const formGroups = section.querySelectorAll('.form-group.currency-input-group');
     const itemCount = formGroups.length;
     const itemName = `item_${sectionName}_${itemCount}`;
@@ -400,10 +395,10 @@ function addItem(btn) {
     const formGroup = document.createElement('div');
     formGroup.className = 'form-group currency-input-group fade-in-item';
     formGroup.innerHTML = `
-        <input type="text" name="${itemName}" placeholder="New Item" class="item-title">
+        <input type="text" name="${itemName}" placeholder="New Item" class="item-title" value="${itemValue}">
         <div class="currency-input-wrapper">
             <span class="currency-symbol">$</span>
-            <input type="number" name="${amountName}" step="0.01" placeholder="Amount" class="currency-input">
+            <input type="number" name="${amountName}" step="0.01" placeholder="Amount" class="currency-input" value="${amountValue}">
         </div>
         <button type="button" class="delete-item-btn" aria-label="Delete item" onclick="deleteItem(this)">
             <span class="delete-icon">&#10005;</span>
