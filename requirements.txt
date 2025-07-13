@@ -7,3 +7,4 @@ google-auth-oauthlib
 google-auth-httplib2
 gunicorn
 Flask-Session
+redis>=5.0.0

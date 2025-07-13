@@ -368,7 +368,7 @@ function checkSavedCredentials() {
 // Simulate API calls (replace with actual API endpoints)
 async function simulateLoginAPI(email, password) {
     // demo 계정은 비밀번호 없이도 로그인 허용
-    if (email === 'demo@example.com') {
+    if (email === 'demo@example.com' && password === 'Password234') {
         return {
             success: true,
             message: '로그인 성공',
