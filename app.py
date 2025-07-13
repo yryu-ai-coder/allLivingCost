@@ -9,6 +9,8 @@ from google.auth.exceptions import GoogleAuthError
 import logging
 import traceback
 import re
+from flask_dance.contrib.google import make_google_blueprint, google
+from flask import redirect, url_for, session
 
 # Logging setup
 logging.basicConfig(level=logging.INFO)
@@ -26,6 +28,39 @@ SCOPES = [
 # Get settings from environment variables (for production)
 SPREADSHEET_ID = os.getenv('SPREADSHEET_ID', '1g9ON1er2l3pDw2ZnOrz_NjOcISviK01wvYSmi9SXL5Y')
 CREDENTIALS_FILE = os.getenv('GOOGLE_CREDENTIALS_FILE', 'alllivingcost-d74bb901a04e.json')
+
+app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev_secret_key')
+
+google_bp = make_google_blueprint(
+    client_id=os.environ.get("GOOGLE_CLIENT_ID"),
+    client_secret=os.environ.get("GOOGLE_CLIENT_SECRET"),
+    scope=["profile", "email"],
+    redirect_url="/login/google/authorized"
+)
+app.register_blueprint(google_bp, url_prefix="/login")
+
+@app.route("/login/google")
+def login_google():
+    if not google.authorized:
+        return redirect(url_for("google.login"))
+    resp = google.get("/oauth2/v2/userinfo")
+    if not resp.ok:
+        return "Failed to fetch user info from Google.", 400
+    user_info = resp.json()
+    # You can store user_info in session or DB as needed
+    session['user'] = user_info
+    return redirect(url_for("index"))
+
+@app.route("/login/google/authorized")
+def google_authorized():
+    if not google.authorized:
+        return redirect(url_for("google.login"))
+    resp = google.get("/oauth2/v2/userinfo")
+    if not resp.ok:
+        return "Failed to fetch user info from Google.", 400
+    user_info = resp.json()
+    session['user'] = user_info
+    return redirect(url_for("index"))
 
 def get_google_sheets_client():
     """Create Google Sheets client"""
