@@ -1,8 +1,8 @@
 Flask
 flask-cors
-flask-dance
+flask-dance>=6.0.0
 gspread
 google-auth
 google-auth-oauthlib
 google-auth-httplib2
-gunicorn 
+gunicorn
