@@ -34,13 +34,7 @@ app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev_secret_key')
 google_bp = make_google_blueprint(
     client_id=os.environ.get("GOOGLE_CLIENT_ID"),
     client_secret=os.environ.get("GOOGLE_CLIENT_SECRET"),
-    scope=[
-        "openid",
-        "https://www.googleapis.com/auth/userinfo.profile",
-        "https://www.googleapis.com/auth/userinfo.email",
-        "email",
-        "profile"
-    ],
+    scope=["openid", "email", "profile"],
     redirect_url="/login/google/authorized"
 )
 app.register_blueprint(google_bp, url_prefix="/login")
