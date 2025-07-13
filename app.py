@@ -11,6 +11,9 @@ import traceback
 import re
 from flask_dance.contrib.google import make_google_blueprint, google
 from flask import redirect, url_for, session
+from flask_session import Session
+app.config['SESSION_TYPE'] = 'filesystem'
+Session(app)
 
 # Logging setup
 logging.basicConfig(level=logging.INFO)
@@ -20,8 +23,11 @@ app = Flask(__name__)
 CORS(app)  # Enable CORS
 app.config.update(
     SESSION_COOKIE_SECURE=True,
-    SESSION_COOKIE_SAMESITE="Lax"
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_DOMAIN=".onrender.com"
 )
+app.config['SESSION_TYPE'] = 'filesystem'
+Session(app)
 
 # Google Sheets API settings
 SCOPES = [
