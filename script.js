@@ -384,40 +384,91 @@ function bindAndUpdateSection(section) {
     updateSubTotal(section);
 }
 
-// Add item logic for dynamic item addition
-function addItem(btn, itemValue = '', amountValue = '') {
-    const section = btn.closest('.form-section');
-    const sectionName = section.getAttribute('data-section');
-    const formGroups = section.querySelectorAll('.form-group.currency-input-group');
-    const itemCount = formGroups.length;
-    const itemName = `item_${sectionName}_${itemCount}`;
-    const amountName = `${sectionName}_${itemCount}`;
-    const formGroup = document.createElement('div');
-    formGroup.className = 'form-group currency-input-group fade-in-item';
-    formGroup.innerHTML = `
-        <input type="text" name="${itemName}" placeholder="New Item" class="item-title" value="${itemValue}">
-        <div class="currency-input-wrapper">
-            <span class="currency-symbol">$</span>
-            <input type="number" name="${amountName}" step="0.01" placeholder="Amount" class="currency-input" value="${amountValue}">
-        </div>
-        <button type="button" class="delete-item-btn" aria-label="Delete item" onclick="deleteItem(this)">
-            <span class="delete-icon">&#10005;</span>
-            <span class="delete-tooltip">Delete item</span>
-        </button>
-    `;
-    // Insert before the sub-total row (which is always before the add button)
-    const subTotalRow = section.querySelector('.sub-total-row');
-    section.insertBefore(formGroup, subTotalRow);
-    setTimeout(() => {
-        formGroup.classList.add('show');
-    }, 10);
-    // Bind input event only for the new input
-    const newInput = formGroup.querySelector('.currency-input');
-    if (newInput) {
-        newInput._subTotalHandler = function() { updateSubTotal(this); };
-        newInput.addEventListener('input', newInput._subTotalHandler);
-    }
-    updateSubTotal(section);
+// 섹션별 기본값 정의 (index.html과 동일하게)
+const defaultValues = {
+  housing: [
+    { name: "Mortgage", amount: "3058.39" },
+    { name: "HOA", amount: "163.95" },
+    { name: "City of Antioch (Water & Sewer)", amount: "" },
+    { name: "Republic Services (Trash)", amount: "" },
+    { name: "Solar Panel", amount: "158.02" }
+  ],
+  credit: [
+    { name: "BestBuy", amount: "" },
+    { name: "Wells Fargo Active Cash", amount: "" },
+    { name: "Wells Fargo Autograph", amount: "" },
+    { name: "Citi Bank", amount: "" }
+  ],
+  loans: [
+    { name: "Wells Fargo Loan (8930)", amount: "252.92" },
+    { name: "Wells Fargo Loan (2560)", amount: "437.59" }
+  ],
+  vehicle: [
+    { name: "US Bank (Tesla Model Y 2022)", amount: "894.41" }
+  ],
+  studentloan: [
+    { name: "AES Student Loan", amount: "152.36" }
+  ],
+  utilities: [
+    { name: "AT&T Internet", amount: "" },
+    { name: "Verizon (Mobile)", amount: "" }
+  ],
+  insurance: [
+    { name: "Farmers Auto Insurance", amount: "" },
+    { name: "Life Insurance", amount: "151.58" }
+  ],
+  subscriptions: [
+    { name: "YouTube Premium", amount: "18.99" },
+    { name: "Google One", amount: "19.99" },
+    { name: "Apple iCloud+", amount: "9.99" },
+    { name: "OpenAI (ChatGPT)", amount: "19.99" },
+    { name: "SharePoint Online", amount: "12.50" }
+  ],
+  income: [
+    { name: "CSAA IG", amount: "" }
+  ]
+};
+
+// addItem 함수 수정: 기본값 적용
+function addItem(btn, itemValue, amountValue) {
+  const section = btn.closest('.form-section');
+  const sectionName = section.getAttribute('data-section');
+  const formGroups = section.querySelectorAll('.form-group.currency-input-group');
+  const itemCount = formGroups.length;
+  const itemName = `item_${sectionName}_${itemCount}`;
+  const amountName = `${sectionName}_${itemCount}`;
+  // 기본값 적용
+  if (itemValue === undefined && amountValue === undefined) {
+    const def = defaultValues[sectionName]?.[itemCount] || { name: "New Item", amount: "" };
+    itemValue = def.name;
+    amountValue = def.amount;
+  }
+  const formGroup = document.createElement('div');
+  formGroup.className = 'form-group currency-input-group fade-in-item';
+  formGroup.innerHTML = `
+      <input type="text" name="${itemName}" placeholder="New Item" class="item-title" value="${itemValue}">
+      <div class="currency-input-wrapper">
+          <span class="currency-symbol">$</span>
+          <input type="number" name="${amountName}" step="0.01" placeholder="Amount" class="currency-input" value="${amountValue}">
+      </div>
+      <button type="button" class="delete-item-btn" aria-label="Delete item" onclick="deleteItem(this)">
+          <span class="delete-icon">&#10005;</span>
+          <span class="delete-tooltip">Delete item</span>
+      </button>
+  `;
+  // Insert before the sub-total row (which is always before the add button)
+  const subTotalRow = section.querySelector('.sub-total-row');
+  section.insertBefore(formGroup, subTotalRow);
+  setTimeout(() => {
+      formGroup.classList.add('show');
+  }, 10);
+  // Bind input event only for the new input
+  const newInput = formGroup.querySelector('.currency-input');
+  if (newInput) {
+      newInput._subTotalHandler = function() { updateSubTotal(this); };
+      newInput.addEventListener('input', newInput._subTotalHandler);
+  }
+  updateSubTotal(section);
 }
 
 function deleteItem(btn) {
